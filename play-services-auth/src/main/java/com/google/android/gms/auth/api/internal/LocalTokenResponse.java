@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.android.gms.auth.firstparty.dataservice;
+package com.google.android.gms.auth.api.internal;
 
-public class TokenResponse {
+public class LocalTokenResponse {
     public String access_token;
     public String token_type;
     public Integer expires_in;

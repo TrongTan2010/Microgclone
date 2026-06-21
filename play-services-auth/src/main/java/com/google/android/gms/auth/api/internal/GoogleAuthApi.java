@@ -14,13 +14,21 @@
  * limitations under the License.
  */
 
-package com.google.android.gms.auth.firstparty.dataservice;
+package com.google.android.gms.auth.api.internal;
 
-public class TokenResponse {
-    public String access_token;
-    public String token_type;
-    public Integer expires_in;
-    public String refresh_token;
-    public String scope;
-    public String id_token;
+import retrofit2.Call;
+import retrofit2.http.Field;
+import retrofit2.http.FormUrlEncoded;
+import retrofit2.http.POST;
+
+public interface GoogleAuthApi {
+    @FormUrlEncoded
+    @POST("token")
+    Call<LocalTokenResponse> exchangeCodeForToken(
+            @Field("code") String code,
+            @Field("client_id") String clientId,
+            @Field("client_secret") String clientSecret,
+            @Field("redirect_uri") String redirectUri,
+            @Field("grant_type") String grantType // "authorization_code" hoặc "refresh_token"
+    );
 }
