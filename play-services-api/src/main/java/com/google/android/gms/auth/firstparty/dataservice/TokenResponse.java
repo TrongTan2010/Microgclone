@@ -16,11 +16,25 @@
 
 package com.google.android.gms.auth.firstparty.dataservice;
 
-public class TokenResponse {
+import org.microg.safeparcel.AutoSafeParcelable;
+
+public class TokenResponse extends AutoSafeParcelable {
+    @Field(1)
     public String access_token;
+    @Field(2)
     public String token_type;
+    @Field(3)
     public Integer expires_in;
+    @Field(4)
     public String refresh_token;
+    @Field(5)
     public String scope;
+    @Field(6)
     public String id_token;
+    @Field(7)
+    public String error;
+    @Field(8)
+    public String error_description;
+
+    public static final Creator<TokenResponse> CREATOR = new AutoCreator<TokenResponse>(TokenResponse.class);
 }
