@@ -1,17 +1,5 @@
 /*
- * Copyright (C) 2013-2017 microG Project Team
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * AuthInterceptor modified to call native refresh via NativeAuth when 401 encountered.
  */
 
 package com.google.android.gms.auth.api.internal;
@@ -22,11 +10,18 @@ import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import com.google.gson.Gson;
+
 public class AuthInterceptor implements Interceptor {
     private final AuthStorage authStorage;
+    private final Object refreshLock = new Object();
+    private final String clientId;
+    private final String clientSecret;
 
-    public AuthInterceptor(AuthStorage authStorage) {
+    public AuthInterceptor(AuthStorage authStorage, String clientId, String clientSecret) {
         this.authStorage = authStorage;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
     }
 
     @Override
@@ -42,7 +37,41 @@ public class AuthInterceptor implements Interceptor {
         Request request = builder.build();
         Response response = chain.proceed(request);
 
-        // Optional: handle 401 here (refresh token flow) if needed
+        if (response.code() == 401) {
+            String refreshToken = authStorage.getRefreshToken();
+            if (refreshToken != null && !refreshToken.isEmpty()) {
+                synchronized (refreshLock) {
+                    String newToken = authStorage.getToken();
+                    if (newToken == null || newToken.equals(token)) {
+                        try {
+                            // Call native refresh
+                            String json = NativeAuth.refreshToken(refreshToken, clientId, clientSecret);
+                            Gson gson = new Gson();
+                            LocalTokenResponse resp = gson.fromJson(json, LocalTokenResponse.class);
+                            if (resp != null && resp.access_token != null) {
+                                authStorage.saveTokensFromResponse(resp);
+                                newToken = resp.access_token;
+                            } else {
+                                authStorage.clearAll();
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            authStorage.clearAll();
+                        }
+                    }
+
+                    String finalToken = authStorage.getToken();
+                    if (finalToken != null && !finalToken.isEmpty()) {
+                        Request newRequest = original.newBuilder()
+                                .header("Authorization", "Bearer " + finalToken)
+                                .build();
+                        response.close();
+                        return chain.proceed(newRequest);
+                    }
+                }
+            }
+        }
+
         return response;
     }
 }

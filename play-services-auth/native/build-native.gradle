@@ -1,0 +1,41 @@
+// Gradle task to build native library using cargo-ndk and copy to jniLibs
+// Usage: ./gradlew :play-services-auth:buildNative
+
+apply plugin: 'base'
+
+tasks.register("buildNative") {
+    group = "build"
+    description = "Build native Rust library for Android using cargo-ndk (must be installed) and copy to jniLibs"
+
+    doLast {
+        def projectDir = projectDir
+        def nativeDir = new File(projectDir, "native/myauth")
+        def outBase = new File(projectDir, "src/main/jniLibs")
+        if (!nativeDir.exists()) {
+            println "Native dir does not exist: ${nativeDir}"
+            return
+        }
+        println "Building native library (cargo-ndk must be installed)..."
+        def cmd = ["cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86_64", "--", "build", "--release", "--manifest-path", nativeDir.absolutePath + "/Cargo.toml"]
+        println cmd.join(" ")
+        def proc = cmd.execute(null, projectDir)
+        proc.in.eachLine { println it }
+        proc.err.eachLine { System.err.println it }
+        proc.waitFor()
+
+        // Copy .so files
+        def targets = ["arm64-v8a", "armeabi-v7a", "x86_64"]
+        targets.each { abi ->
+            def src = new File(projectDir, "native/myauth/target/${abi}/release/libmyauth.so")
+            if (src.exists()) {
+                def destDir = new File(projectDir, "src/main/jniLibs/${abi}")
+                destDir.mkdirs()
+                def dest = new File(destDir, "libmyauth.so")
+                src.withInputStream { i -> dest.withOutputStream { o -> o << i } }
+                println "Copied ${src} -> ${dest}"
+            } else {
+                println "Built lib not found for ${abi}: expected ${src}"
+            }
+        }
+    }
+}
