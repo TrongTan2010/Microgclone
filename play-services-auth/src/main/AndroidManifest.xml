@@ -1,6 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.google.android.gms.auth.api">
 
-<!--
-  ~ SPDX-FileCopyrightText: 2022 microG Project Team
-  ~ SPDX-License-Identifier: Apache-2.0
-  -->
-<manifest />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <activity android:name="com.google.android.gms.auth.api.internal.ComposeLoginActivity"
+            android:exported="true"/>
+
+        <activity android:name="com.google.android.gms.auth.api.internal.ComposeRedirectActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Adjust the scheme/host/path to match redirectUri you configure -->
+                <data android:scheme="microgclone" android:host="oauth" android:path="/redirect" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
